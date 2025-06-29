@@ -245,6 +245,13 @@ grub_gfxmenu_clear_timeout (void *data)
     redraw_timeouts (view);
 }
 
+void
+grub_gfxmenu_redraw(void *data)
+{
+  struct grub_gfxmenu_view *view = data;
+  grub_gfxmenu_view_redraw(view, &view->screen);
+}
+
 static void
 update_menu_visit (grub_gui_component_t component,
                    void *userdata)

@@ -20,6 +20,7 @@
 #include <grub/mm.h>
 #include <grub/misc.h>
 #include <grub/gui.h>
+#include <grub/time.h>
 #include <grub/gui_string_util.h>
 #include <grub/bitmap.h>
 #include <grub/bitmap_scale.h>
@@ -37,6 +38,21 @@ struct grub_gui_image
 };
 
 typedef struct grub_gui_image *grub_gui_image_t;
+
+struct grub_gui_animated_image // extends image
+{
+  struct grub_gui_image image;
+
+  // frame information
+  int frame_count;
+  int frame_duration_ms;
+  struct grub_video_bitmap** frame_bitmaps;
+
+  // draw status
+  grub_uint64_t first_draw_ms;
+};
+
+typedef struct grub_gui_animated_image* grub_gui_animated_image_t;
 
 static void
 image_destroy (void *vself)
@@ -271,3 +287,189 @@ grub_gui_image_new (void)
   return (grub_gui_component_t) image;
 }
 
+static void
+animated_image_destroy(void* vself)
+{
+  grub_gui_animated_image_t self = vself;
+  int index;
+
+  if (self->frame_bitmaps)
+  {
+    for (index = 0; index < self->frame_count; index++)
+    {
+      if (self->frame_bitmaps[index])
+      {
+        grub_video_bitmap_destroy (self->frame_bitmaps[index]);
+      }
+    }
+    grub_free(self->frame_bitmaps);
+  }
+
+  grub_free(self);
+}
+
+static void
+animated_image_paint (void *vself, const grub_video_rect_t *region)
+{
+  grub_gui_animated_image_t self = vself;
+  grub_uint64_t time = grub_get_time_ms();
+  // switch to current image
+  if (self->frame_bitmaps)
+  {
+    if (self->first_draw_ms == 0)
+    {
+      self->first_draw_ms = time;
+    }
+    self->image.bitmap = self->frame_bitmaps[grub_divmod64(time - self->first_draw_ms, self->frame_count, NULL)];
+  }
+
+  image_paint(vself, region);
+}
+
+static grub_err_t animated_image_load_frames(grub_gui_animated_image_t self, const char* value)
+{
+  // set file property, eg: animation_frames*.png
+  char* abspattern = NULL;
+  char* abspath = NULL;
+  int abspathlen;
+  char* prefix = NULL;
+  char* suffix;
+  char* star;
+  int index;
+  grub_err_t err = GRUB_ERR_NONE;
+
+  /* Resolve to an absolute path.  */
+  if (!self->image.theme_dir)
+  {
+    return grub_error(GRUB_ERR_BUG, "unspecified theme_dir");
+  }
+  if (self->frame_count <= 0)
+  {
+    return grub_error(GRUB_ERR_BUG, "unspecified frame_count");
+  }
+
+  abspattern = grub_resolve_relative_path(self->image.theme_dir, value);
+  if (!abspattern)
+  {
+    return grub_errno;
+  }
+  star = grub_strchr(abspattern, '*');
+  if (!star)
+  {
+    err = grub_error(GRUB_ERR_BAD_ARGUMENT,
+                     "missing `*' in frame_animation file pattern `%s'", abspattern);
+    goto fail;
+  }
+
+  /* Prefix: Get the part before the '*'.  */
+  prefix = grub_malloc(star - abspattern + 1);
+  if (!prefix)
+  {
+    err = grub_errno;
+    goto fail;
+  }
+
+  grub_memcpy(prefix, abspattern, star - abspattern);
+  prefix[star - abspattern] = '\0';
+
+  /* Suffix:  Everything after the '*' is the suffix.  */
+  suffix = star + 1;
+
+  self->frame_bitmaps = grub_calloc(self->frame_count, sizeof (*self->frame_bitmaps));
+  if (!self->frame_bitmaps)
+  {
+    err = grub_errno;
+    goto fail;
+  }
+
+  abspathlen = grub_strlen(abspattern) + 15;
+  abspath = grub_calloc(abspathlen, sizeof (char));
+  if (!abspath)
+  {
+    err = grub_errno;
+    goto fail;
+  }
+  for (index = 0; index < self->frame_count; index++)
+  {
+    grub_snprintf(abspath, abspathlen, "%s%d%s", prefix, index, suffix);
+    self->image.bitmap = self->image.raw_bitmap = NULL;
+    err = load_image(&self->image, abspath);
+    if (err != GRUB_ERR_NONE)
+    {
+      goto fail;
+    }
+    self->frame_bitmaps[index] = self->image.bitmap;
+  }
+
+fail:
+  if (abspattern)
+    grub_free(abspattern);
+  if (abspath)
+    grub_free(abspath);
+  if (prefix)
+    grub_free(prefix);
+  if (self->frame_bitmaps)
+  {
+    for (index = 0; index < self->frame_count; index++)
+    {
+      if (self->frame_bitmaps[index])
+      {
+        grub_video_bitmap_destroy(self->frame_bitmaps[index]);
+      }
+    }
+    grub_free(self->frame_bitmaps);
+    self->frame_bitmaps = NULL;
+  }
+  return err;
+}
+
+static grub_err_t
+animated_image_set_property(void* vself, const char* name, const char* value)
+{
+  grub_gui_animated_image_t self = vself;
+
+  if (grub_strcmp(name, "frame_count") == 0)
+  {
+    self->frame_count = grub_strtoul(value, NULL, 10);
+  }
+  else if (grub_strcmp(name, "frame_duration_ms") == 0)
+  {
+    self->frame_duration_ms = grub_strtoul(value, NULL, 10);
+  }
+  else if (grub_strcmp(name, "file") == 0)
+  {
+    return animated_image_load_frames(self, value);
+  }
+  return image_set_property(vself, name, value);
+}
+
+static int
+animated_image_is_instance (void *vself __attribute__((unused)), const char *type)
+{
+  return grub_strcmp (type, "animated_image") == 0;
+}
+
+static struct grub_gui_component_ops animated_image_ops =
+{
+  .destroy = animated_image_destroy,
+  .get_id = image_get_id,
+  .is_instance = animated_image_is_instance,
+  .paint = animated_image_paint,
+  .set_parent = image_set_parent,
+  .get_parent = image_get_parent,
+  .set_bounds = image_set_bounds,
+  .get_bounds = image_get_bounds,
+  .get_minimal_size = image_get_minimal_size,
+  .set_property = animated_image_set_property,
+};
+
+grub_gui_component_t
+grub_gui_animated_image_new(void)
+{
+  grub_gui_animated_image_t image;
+  image = grub_zalloc(sizeof(*image));
+  if (!image)
+    return 0;
+  image->image.component.ops = &animated_image_ops;
+  return (grub_gui_component_t)image;
+}

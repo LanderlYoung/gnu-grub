@@ -385,6 +385,17 @@ menu_print_timeout (int timeout)
 }
 
 static void
+menu_redraw (void)
+{
+  struct grub_menu_viewer *cur;
+  for (cur = viewers; cur; cur = cur->next)
+    {
+      if (cur->redraw)
+        cur->redraw (cur->data);
+    }
+}
+
+static void
 menu_fini (void)
 {
   struct grub_menu_viewer *cur, *next;
@@ -698,6 +709,9 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot, int *notify_boot)
 	  menu_fini ();
 	  return default_entry;
 	}
+
+      // redraw necessary components, if any
+      menu_redraw();
 
       c = grub_getkey_noblock ();
 

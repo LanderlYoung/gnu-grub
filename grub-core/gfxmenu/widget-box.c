@@ -89,7 +89,7 @@ draw (grub_gfxmenu_box_t self, int x, int y)
     height_n = tmp;
   tmp = get_height (self->scaled_pixmaps[BOX_PIXMAP_NE]);
   if (tmp > height_n)
-    height_n = tmp;
+    height_n = tmp;/*  */
 
   /* Count maximum width of NW, W, SW.  */
   width_w = get_width (self->scaled_pixmaps[BOX_PIXMAP_NW]);

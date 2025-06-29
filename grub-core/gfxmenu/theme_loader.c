@@ -522,6 +522,10 @@ read_object (struct parsebuf *p, grub_gui_container_t parent)
     {
       component = grub_gui_image_new ();
     }
+  else if (grub_strcmp (name, "animated_image") == 0)
+    {
+      component = grub_gui_animated_image_new ();
+    }
   else if (grub_strcmp (name, "vbox") == 0)
     {
       component = (grub_gui_component_t) grub_gui_vbox_new ();

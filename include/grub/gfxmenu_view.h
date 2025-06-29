@@ -60,6 +60,8 @@ grub_gfxmenu_clear_timeout (void *data);
 void
 grub_gfxmenu_print_timeout (int timeout, void *data);
 void
+grub_gfxmenu_redraw(void *data);
+void
 grub_gfxmenu_set_chosen_entry (int entry, void *data);
 
 grub_err_t grub_font_draw_string (const char *str,

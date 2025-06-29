@@ -209,6 +209,7 @@ grub_gui_container_t grub_gui_vbox_new (void);
 grub_gui_container_t grub_gui_hbox_new (void);
 grub_gui_component_t grub_gui_label_new (void);
 grub_gui_component_t grub_gui_image_new (void);
+grub_gui_component_t grub_gui_animated_image_new (void);
 grub_gui_component_t grub_gui_progress_bar_new (void);
 grub_gui_component_t grub_gui_list_new (void);
 grub_gui_component_t grub_gui_circular_progress_new (void);
