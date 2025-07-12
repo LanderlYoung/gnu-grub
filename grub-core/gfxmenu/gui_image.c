@@ -390,7 +390,8 @@ static grub_err_t animated_image_load_frames(grub_gui_animated_image_t self, con
   }
   if (self->frame_count <= 0)
   {
-    return grub_error(GRUB_ERR_BUG, "unspecified frame_count");
+    return grub_error(GRUB_ERR_BUG, "unspecified frame_count or wrong property order\n"
+      "\ttips: always put \"file\" property at last");
   }
   if (self->frame_duration_ms <= 0)
   {
