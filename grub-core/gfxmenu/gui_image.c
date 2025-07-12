@@ -344,11 +344,23 @@ animated_image_paint (void *vself, const grub_video_rect_t *region)
     {
       self->first_draw_ms = time;
     }
-    grub_divmod64(time - self->first_draw_ms, self->frame_duration_ms, &bitmap_index);
+    bitmap_index = grub_divmod64(time - self->first_draw_ms, self->frame_duration_ms, NULL);
+    grub_divmod64(bitmap_index, self->frame_count, &bitmap_index);
 
     self->image.bitmap = self->frame_bitmaps[bitmap_index].bitmap;
     self->image.raw_bitmap = self->frame_bitmaps[bitmap_index].raw_bitmap;
     image_paint(vself, region);
+
+    if (true)
+    {
+      char buffer[32];
+      grub_snprintf(buffer, sizeof(buffer), "frame_%ld", bitmap_index);
+      grub_font_draw_string(buffer,
+                            grub_font_get("Unknown Regular 16"),
+                            grub_video_map_rgb(0, 255, 255),
+                            (int)(self->image.bounds.x),
+                            (int)(self->image.bounds.y + self->image.bounds.height - 16));
+    }
 
     // restore
     self->image.bitmap = self->image.raw_bitmap = NULL;

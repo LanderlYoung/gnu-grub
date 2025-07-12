@@ -213,6 +213,8 @@ redraw_timeouts (struct grub_gfxmenu_view *view)
     {
       grub_video_rect_t bounds;
       cur->self->ops->get_bounds (cur->self, &bounds);
+    // bounds = view->screen;
+    // grub_fatal("fuck timeout %d %d %d %d", bounds.x, bounds.y,bounds.width, bounds.height);
       grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
       grub_gfxmenu_view_redraw (view, &bounds);
     }
@@ -245,11 +247,52 @@ grub_gfxmenu_clear_timeout (void *data)
     redraw_timeouts (view);
 }
 
+// static void
+// grub_gfxmenu_draw_entire(struct grub_gfxmenu_view *view)
+// {
+//   grub_video_rect_t bounds;
+//   view->canvas->component.ops->get_bounds (view->canvas, &bounds);
+//   grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+//   grub_gfxmenu_view_redraw (view, &bounds);
+// }
+
 void
 grub_gfxmenu_redraw(void *data)
 {
   struct grub_gfxmenu_view *view = data;
-  grub_gfxmenu_view_redraw(view, &view->screen);
+  // grub_gfxmenu_draw_entire (view);
+  // grub_video_swap_buffers ();
+  // if (view->double_repaint)
+  //   grub_gfxmenu_draw_entire (view);
+
+  /* Clear the screen; there may be garbage left over in video memory. */
+  // grub_video_fill_rect (grub_video_map_rgb (0, 0, 0),
+  //                       view->screen.x, view->screen.y,
+  //                       view->screen.width, view->screen.height);
+  // grub_video_swap_buffers ();
+  // if (view->double_repaint)
+  //   grub_video_fill_rect (grub_video_map_rgb (0, 0, 0),
+  //       view->screen.x, view->screen.y,
+  //       view->screen.width, view->screen.height);
+
+  grub_video_rect_t bounds;
+  // cur->self->ops->get_bounds (cur->self, &bounds);
+  bounds = view->screen;
+  // grub_fatal("fuck timeout %d %d %d %d", bounds.x, bounds.y,bounds.width, bounds.height);
+  grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+  grub_gfxmenu_view_redraw (view, &bounds);
+  // grub_fatal(  "called %s", __func__);
+  // grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+  // // grub_fatal("[redraw] %d %d %d %d", view->screen.x, view->screen.y, view->screen.width,view->screen.height);
+  // grub_gfxmenu_view_redraw (view, &view->screen);
+  // grub_video_swap_buffers ();
+  // if (view->double_repaint)
+  // {
+  //   grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+  //   grub_gfxmenu_view_redraw (view, &view->screen);
+  // }
+
+  // grub_gfxmenu_view_draw(view);
 }
 
 static void

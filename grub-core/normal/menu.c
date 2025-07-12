@@ -588,6 +588,8 @@ static int
 run_menu (grub_menu_t menu, int nested, int *auto_boot, int *notify_boot)
 {
   grub_uint64_t saved_time;
+  grub_uint64_t draw_time = grub_get_time_ms ();
+	int drawCount = 0;
   int default_entry, current_entry;
   int timeout;
   enum timeout_style timeout_style;
@@ -702,6 +704,13 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot, int *notify_boot)
 	  menu_print_timeout (timeout);
 	}
 
+  	// redraw necessary components, if any
+  	if (grub_get_time_ms() - draw_time > 16)
+  	{
+  		draw_time = grub_get_time_ms ();
+  		menu_redraw();
+  	}
+
       if (timeout == 0)
 	{
 	  grub_env_unset ("timeout");
@@ -709,9 +718,6 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot, int *notify_boot)
 	  menu_fini ();
 	  return default_entry;
 	}
-
-      // redraw necessary components, if any
-      menu_redraw();
 
       c = grub_getkey_noblock ();
 
