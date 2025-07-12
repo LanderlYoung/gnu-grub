@@ -49,6 +49,7 @@ struct grub_gui_animated_image // extends image
 {
   struct grub_gui_image image;
 
+  int show_debug_info;
   // frame information
   int frame_count;
   int frame_duration_ms;
@@ -351,19 +352,21 @@ animated_image_paint (void *vself, const grub_video_rect_t *region)
     self->image.raw_bitmap = self->frame_bitmaps[bitmap_index].raw_bitmap;
     image_paint(vself, region);
 
-    if (true)
+    if (self->show_debug_info)
     {
       char buffer[32];
       grub_snprintf(buffer, sizeof(buffer), "frame_%ld", bitmap_index);
       grub_font_draw_string(buffer,
                             grub_font_get("Unknown Regular 16"),
-                            grub_video_map_rgb(0, 255, 255),
-                            (int)(self->image.bounds.x),
-                            (int)(self->image.bounds.y + self->image.bounds.height - 16));
+                            grub_video_map_rgb(255, 0, 0),
+                            (int)self->image.bounds.x,
+                            (int)(self->image.bounds.y + self->image.bounds.height - 20));
     }
-
     // restore
     self->image.bitmap = self->image.raw_bitmap = NULL;
+
+    // schedule draw next frame
+    grub_gfxmenu_schedule_redraw(self->frame_duration_ms);
   }
 }
 
@@ -478,6 +481,10 @@ animated_image_set_property(void* vself, const char* name, const char* value)
   else if (grub_strcmp(name, "frame_duration_ms") == 0)
   {
     self->frame_duration_ms = grub_strtoul(value, NULL, 10);
+  }
+  else if (grub_strcmp(name, "show_debug_info") == 0)
+  {
+    self->show_debug_info = grub_strtoul(value, NULL, 10);
   }
   else if (grub_strcmp(name, "file") == 0)
   {

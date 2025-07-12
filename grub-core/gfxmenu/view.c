@@ -194,6 +194,7 @@ struct progress_value_data
 };
 
 struct grub_gfxmenu_timeout_notify *grub_gfxmenu_timeout_notifications;
+static grub_uint64_t grub_gfxmenu_scheduled_draw_time_ms = 0;
 
 static void
 update_timeouts (int visible, int start, int value, int end)
@@ -213,8 +214,6 @@ redraw_timeouts (struct grub_gfxmenu_view *view)
     {
       grub_video_rect_t bounds;
       cur->self->ops->get_bounds (cur->self, &bounds);
-    // bounds = view->screen;
-    // grub_fatal("fuck timeout %d %d %d %d", bounds.x, bounds.y,bounds.width, bounds.height);
       grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
       grub_gfxmenu_view_redraw (view, &bounds);
     }
@@ -247,52 +246,45 @@ grub_gfxmenu_clear_timeout (void *data)
     redraw_timeouts (view);
 }
 
-// static void
-// grub_gfxmenu_draw_entire(struct grub_gfxmenu_view *view)
-// {
-//   grub_video_rect_t bounds;
-//   view->canvas->component.ops->get_bounds (view->canvas, &bounds);
-//   grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
-//   grub_gfxmenu_view_redraw (view, &bounds);
-// }
+static void
+grub_gfxmenu_draw_entire(struct grub_gfxmenu_view *view)
+{
+  grub_video_rect_t bounds;
+  bounds = view->screen;
+  grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+  grub_gfxmenu_view_redraw (view, &bounds);
+}
 
 void
 grub_gfxmenu_redraw(void *data)
 {
   struct grub_gfxmenu_view *view = data;
-  // grub_gfxmenu_draw_entire (view);
-  // grub_video_swap_buffers ();
-  // if (view->double_repaint)
-  //   grub_gfxmenu_draw_entire (view);
 
-  /* Clear the screen; there may be garbage left over in video memory. */
-  // grub_video_fill_rect (grub_video_map_rgb (0, 0, 0),
-  //                       view->screen.x, view->screen.y,
-  //                       view->screen.width, view->screen.height);
-  // grub_video_swap_buffers ();
-  // if (view->double_repaint)
-  //   grub_video_fill_rect (grub_video_map_rgb (0, 0, 0),
-  //       view->screen.x, view->screen.y,
-  //       view->screen.width, view->screen.height);
+  if (grub_gfxmenu_scheduled_draw_time_ms == 0 ||
+    grub_get_time_ms () < grub_gfxmenu_scheduled_draw_time_ms)
+  {
+    // no need
+    return;
+  }
 
-  grub_video_rect_t bounds;
-  // cur->self->ops->get_bounds (cur->self, &bounds);
-  bounds = view->screen;
-  // grub_fatal("fuck timeout %d %d %d %d", bounds.x, bounds.y,bounds.width, bounds.height);
-  grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
-  grub_gfxmenu_view_redraw (view, &bounds);
-  // grub_fatal(  "called %s", __func__);
-  // grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
-  // // grub_fatal("[redraw] %d %d %d %d", view->screen.x, view->screen.y, view->screen.width,view->screen.height);
-  // grub_gfxmenu_view_redraw (view, &view->screen);
-  // grub_video_swap_buffers ();
-  // if (view->double_repaint)
-  // {
-  //   grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
-  //   grub_gfxmenu_view_redraw (view, &view->screen);
-  // }
+  grub_gfxmenu_scheduled_draw_time_ms = 0;
+  grub_gfxmenu_draw_entire (view);
+  grub_video_swap_buffers ();
+  if (view->double_repaint)
+  {
+    grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+    grub_gfxmenu_draw_entire (view);
+  }
+}
 
-  // grub_gfxmenu_view_draw(view);
+void
+grub_gfxmenu_schedule_redraw (grub_int64_t delay_ms)
+{
+  grub_uint64_t due = grub_get_time_ms() + delay_ms;
+  if (grub_gfxmenu_scheduled_draw_time_ms == 0 || due < grub_gfxmenu_scheduled_draw_time_ms)
+  {
+    grub_gfxmenu_scheduled_draw_time_ms = due;
+  }
 }
 
 static void
