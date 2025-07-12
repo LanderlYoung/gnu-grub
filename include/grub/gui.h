@@ -118,7 +118,7 @@ grub_gfxmenu_timeout_unregister (grub_gui_component_t self)
 }
 
 void
-grub_gfxmenu_schedule_redraw (grub_int64_t delay_ms);
+grub_gfxmenu_schedule_redraw (grub_uint64_t delay_ms, const grub_video_rect_t *bounds);
 
 typedef signed grub_fixed_signed_t;
 #define GRUB_FIXED_1 0x10000

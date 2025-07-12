@@ -337,7 +337,8 @@ animated_image_paint (void *vself, const grub_video_rect_t *region)
 {
   grub_gui_animated_image_t self = vself;
   grub_uint64_t time = grub_get_time_ms();
-  grub_uint64_t bitmap_index = 0;
+  grub_uint64_t bitmap_index;
+  grub_uint64_t mod;
   // switch to current image
   if (self->frame_bitmaps)
   {
@@ -345,7 +346,7 @@ animated_image_paint (void *vself, const grub_video_rect_t *region)
     {
       self->first_draw_ms = time;
     }
-    bitmap_index = grub_divmod64(time - self->first_draw_ms, self->frame_duration_ms, NULL);
+    bitmap_index = grub_divmod64(time - self->first_draw_ms, self->frame_duration_ms, &mod);
     grub_divmod64(bitmap_index, self->frame_count, &bitmap_index);
 
     self->image.bitmap = self->frame_bitmaps[bitmap_index].bitmap;
@@ -366,7 +367,7 @@ animated_image_paint (void *vself, const grub_video_rect_t *region)
     self->image.bitmap = self->image.raw_bitmap = NULL;
 
     // schedule draw next frame
-    grub_gfxmenu_schedule_redraw(self->frame_duration_ms);
+    grub_gfxmenu_schedule_redraw(self->frame_duration_ms - mod, &self->image.bounds);
   }
 }
 
