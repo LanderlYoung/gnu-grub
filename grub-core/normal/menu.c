@@ -385,6 +385,17 @@ menu_print_timeout (int timeout)
 }
 
 static void
+menu_redraw (void)
+{
+  struct grub_menu_viewer *cur;
+  for (cur = viewers; cur; cur = cur->next)
+    {
+      if (cur->redraw)
+        cur->redraw (cur->data);
+    }
+}
+
+static void
 menu_fini (void)
 {
   struct grub_menu_viewer *cur, *next;
@@ -690,6 +701,8 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot, int *notify_boot)
 	  grub_menu_set_timeout (timeout);
 	  menu_print_timeout (timeout);
 	}
+
+	menu_redraw();
 
       if (timeout == 0)
 	{

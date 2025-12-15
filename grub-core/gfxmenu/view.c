@@ -195,6 +195,17 @@ struct progress_value_data
 
 struct grub_gfxmenu_timeout_notify *grub_gfxmenu_timeout_notifications;
 
+struct gfxmenu_dirty_region
+{
+  unsigned left;
+  unsigned top;
+  unsigned right;
+  unsigned bottom;
+};
+
+static grub_uint64_t grub_gfxmenu_scheduled_draw_time_ms = 0;
+struct gfxmenu_dirty_region grub_gfxmenu_scheduled_dirty_bounds = {};
+
 static void
 update_timeouts (int visible, int start, int value, int end)
 {
@@ -243,6 +254,66 @@ grub_gfxmenu_clear_timeout (void *data)
   grub_video_swap_buffers ();
   if (view->double_repaint)
     redraw_timeouts (view);
+}
+
+static void
+grub_gfxmenu_redraw_dirty(struct grub_gfxmenu_view *view, struct gfxmenu_dirty_region *dirty)
+{
+  grub_video_rect_t bounds = {
+    .x = dirty->left,
+    .y = dirty->top,
+    .width = dirty->right - dirty->left,
+    .height = dirty->bottom - dirty->top
+  };
+
+  grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+  grub_gfxmenu_view_redraw (view, &bounds);
+}
+
+void
+grub_gfxmenu_redraw(void *data)
+{
+  struct grub_gfxmenu_view *view = data;
+  struct gfxmenu_dirty_region dirty = grub_gfxmenu_scheduled_dirty_bounds;
+
+  if (grub_gfxmenu_scheduled_draw_time_ms == 0 ||
+    grub_get_time_ms () < grub_gfxmenu_scheduled_draw_time_ms)
+  {
+    return;
+  }
+
+  grub_gfxmenu_scheduled_draw_time_ms = 0;
+  grub_gfxmenu_scheduled_dirty_bounds.left =
+    grub_gfxmenu_scheduled_dirty_bounds.top =
+    grub_gfxmenu_scheduled_dirty_bounds.right =
+    grub_gfxmenu_scheduled_dirty_bounds.bottom = 0;
+
+  grub_gfxmenu_redraw_dirty(view, &dirty);
+  grub_video_swap_buffers ();
+  if (view->double_repaint)
+  {
+    grub_video_set_area_status (GRUB_VIDEO_AREA_ENABLED);
+    grub_gfxmenu_redraw_dirty (view, &dirty);
+  }
+}
+
+void
+grub_gfxmenu_schedule_redraw (grub_uint64_t delay_ms, const grub_video_rect_t *bounds)
+{
+  grub_uint64_t due = grub_get_time_ms() + delay_ms;
+  struct gfxmenu_dirty_region dirty = grub_gfxmenu_scheduled_dirty_bounds;
+
+  dirty.left = grub_min(dirty.left, bounds->x);
+  dirty.top = grub_min(dirty.top, bounds->y);
+  dirty.right = grub_max(dirty.right, bounds->x + bounds->width);
+  dirty.bottom = grub_max(dirty.bottom, bounds->y + bounds->height);
+
+  if (grub_gfxmenu_scheduled_draw_time_ms == 0 ||
+    due < grub_gfxmenu_scheduled_draw_time_ms)
+  {
+    grub_gfxmenu_scheduled_draw_time_ms = due;
+    grub_gfxmenu_scheduled_dirty_bounds = dirty;
+  }
 }
 
 static void

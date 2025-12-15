@@ -33,6 +33,7 @@ struct grub_menu_viewer
   void (*set_chosen_entry) (int entry, void *data);
   void (*print_timeout) (int timeout, void *data);
   void (*clear_timeout) (void *data);
+  void (*redraw) (void *data);
   void (*fini) (void *fini);
 };
 

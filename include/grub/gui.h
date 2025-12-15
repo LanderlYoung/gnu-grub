@@ -117,6 +117,9 @@ grub_gfxmenu_timeout_unregister (grub_gui_component_t self)
       }
 }
 
+void
+grub_gfxmenu_schedule_redraw (grub_uint64_t delay_ms, const grub_video_rect_t *bounds);
+
 typedef signed grub_fixed_signed_t;
 #define GRUB_FIXED_1 0x10000
 
@@ -209,6 +212,7 @@ grub_gui_container_t grub_gui_vbox_new (void);
 grub_gui_container_t grub_gui_hbox_new (void);
 grub_gui_component_t grub_gui_label_new (void);
 grub_gui_component_t grub_gui_image_new (void);
+grub_gui_component_t grub_gui_animated_image_new (void);
 grub_gui_component_t grub_gui_progress_bar_new (void);
 grub_gui_component_t grub_gui_list_new (void);
 grub_gui_component_t grub_gui_circular_progress_new (void);
